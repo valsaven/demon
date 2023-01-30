@@ -1,0 +1,56 @@
+version: "3.8"
+services:
+  mongo:
+    image: mongo:4.4.18
+    container_name: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - 27017:27017
+    networks:
+      - mongo
+    volumes:
+      - ./db/data:/data/db
+      - ./db/config:/data/configdb
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${ME_CONFIG_MONGODB_ADMINUSERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${ME_CONFIG_MONGODB_ADMINPASSWORD}
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD}
+      ME_CONFIG_OPTIONS_EDITORTHEME: material
+    ports:
+      - 8081:8081
+    networks:
+      - mongo
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo mongo:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  web-server:
+    container_name: web-server
+    restart: always
+    build: ./web-server
+    command: npm run start:dev
+    volumes:
+      - ./web-server:/usr/app/
+      - /usr/app/node_modules
+    ports:
+      - "3000:3000"
+    networks:
+      - mongo
+
+networks:
+  mongo:
+    driver: bridge
